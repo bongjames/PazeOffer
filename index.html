@@ -326,6 +326,7 @@
         </div>
 
         <div class="cards-list" id="cardsList"></div>
+        <datalist id="merchant-suggestions"></datalist>
     </div>
 
     <script>
@@ -354,30 +355,23 @@
             document.getElementById('deadline').textContent = `⏰ ${days} days remaining`;
         }
 
-        // Auto-format amount as currency: typing "1086" → "$10.86", or "10.82" → "$10.82"
+        // Format amount on blur: clean up and add $ prefix
         function formatAmountInput(e) {
-            let val = e.target.value;
-            if (val.replace(/[^.]/g, '').length > 0) {
-                let raw = val.replace(/[^0-9.]/g, '');
-                const parts = raw.split('.');
-                if (parts.length > 2) {
-                    raw = parts[0] + '.' + parts.slice(1).join('');
-                }
-                if (raw === '' || raw === '.') {
-                    e.target.value = '';
-                    return;
-                }
-                e.target.value = '$' + raw;
-            } else {
-                let raw = val.replace(/[^0-9]/g, '');
-                if (raw === '') {
-                    e.target.value = '';
-                    return;
-                }
-                let cents = parseInt(raw, 10);
-                let dollars = (cents / 100).toFixed(2);
-                e.target.value = '$' + dollars;
+            let val = e.target.value.replace(/[^0-9.]/g, '');
+            if (val === '' || val === '.') {
+                e.target.value = '';
+                return;
             }
+            // Only keep first decimal point
+            const parts = val.split('.');
+            if (parts.length > 2) {
+                val = parts[0] + '.' + parts.slice(1).join('');
+            }
+            // Limit to 2 decimal places
+            if (parts.length === 2 && parts[1].length > 2) {
+                val = parts[0] + '.' + parts[1].slice(0, 2);
+            }
+            e.target.value = '$' + val;
         }
 
         function toggleAddCard() {
@@ -599,7 +593,7 @@
 
             // Build merchant suggestions datalist
             const merchants = getAllMerchants();
-            const datalistHtml = `<datalist id="merchant-suggestions">${merchants.map(m => `<option value="${m}">`).join('')}</datalist>`;
+            document.getElementById('merchant-suggestions').innerHTML = merchants.map(m => `<option value="${m}">`).join('');
 
             const used = card.transactions.length;
             const credited = card.transactions.filter(t => t.credited).length;
@@ -635,7 +629,7 @@
                 </div>
             `}).join('');
 
-            list.innerHTML = datalistHtml + `
+            list.innerHTML = `
                 <div class="card-item">
                     <div class="card-header">
                         <div>
@@ -657,7 +651,7 @@
                     <div class="log-form">
                         <input type="date" id="date-${card.id}" value="${new Date().toISOString().split('T')[0]}" />
                         <input type="text" id="merchant-${card.id}" class="merchant-input" placeholder="Merchant" list="merchant-suggestions" autocomplete="off" />
-                        <input type="text" id="amount-${card.id}" class="amount-input" placeholder="$" inputmode="numeric" oninput="formatAmountInput(event)" />
+                        <input type="text" id="amount-${card.id}" class="amount-input" placeholder="$" inputmode="decimal" onblur="formatAmountInput(event)" />
                         <button class="success" onclick="logTransaction('${card.id}')">+ Log</button>
                     </div>` : '<div class="maxed-label">✓ Maxed out!</div>'}
                     ${txHtml ? `<div class="transactions-list">${txHtml}</div>` : ''}
