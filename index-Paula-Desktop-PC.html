@@ -28,21 +28,6 @@
         }
         header h1 { font-size: 1.4rem; margin-bottom: 4px; color: #2563eb; }
         header p { color: #475569; font-size: 0.8rem; }
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
-        }
-        .header-actions { display: flex; gap: 6px; }
-        .header-actions button {
-            font-size: 0.7rem;
-            padding: 5px 8px;
-            width: auto;
-            background: #475569;
-            border-radius: 6px;
-        }
-        .header-actions button:hover { background: #334155; }
         .promo-deadline {
             margin-top: 6px;
             font-size: 0.8rem;
@@ -139,6 +124,7 @@
             margin-bottom: 10px;
         }
         .card-name { font-size: 1rem; font-weight: 600; color: #1e293b; }
+        .card-bank { color: #475569; font-size: 0.8rem; }
         .progress-bar {
             background: #e2e8f0;
             border-radius: 8px;
@@ -264,14 +250,7 @@
 <body>
     <div class="container">
         <header>
-            <div class="header-top">
-                <h1>💳 Paze $10 Tracker</h1>
-                <div class="header-actions">
-                    <button onclick="exportData()">Export</button>
-                    <button onclick="document.getElementById('importFile').click()">Import</button>
-                    <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)" />
-                </div>
-            </div>
+            <h1>💳 Paze $10 Tracker</h1>
             <p>Spend $10+ → Get $10 back · Up to 10x per card · June 15 – Sept 10, 2026</p>
             <p class="promo-deadline" id="deadline"></p>
         </header>
@@ -299,7 +278,7 @@
             <button onclick="toggleAddCard()" id="addCardToggle">+ Add a Card</button>
             <div class="add-card-form" id="addCardForm" style="display:none;">
                 <div class="form-row">
-                    <input type="text" id="cardName" placeholder="e.g. Wife's Freedom Flex" style="text-transform:capitalize;" />
+                    <input type="text" id="cardName" placeholder="e.g. Wife's Freedom Flex" />
                     <button onclick="addCard()">Add</button>
                     <button class="danger" onclick="toggleAddCard()">Cancel</button>
                 </div>
@@ -338,8 +317,10 @@
         // Auto-format amount as currency: typing "1086" → "$10.86", or "10.82" → "$10.82"
         function formatAmountInput(e) {
             let val = e.target.value;
+            // If user typed a decimal, treat as dollar amount directly
             if (val.replace(/[^.]/g, '').length > 0) {
                 let raw = val.replace(/[^0-9.]/g, '');
+                // Only keep first decimal point
                 const parts = raw.split('.');
                 if (parts.length > 2) {
                     raw = parts[0] + '.' + parts.slice(1).join('');
@@ -350,6 +331,7 @@
                 }
                 e.target.value = '$' + raw;
             } else {
+                // No decimal: treat as cents (typing "1086" → "$10.86")
                 let raw = val.replace(/[^0-9]/g, '');
                 if (raw === '') {
                     e.target.value = '';
@@ -375,11 +357,8 @@
         }
 
         function addCard() {
-            let name = document.getElementById('cardName').value.trim();
+            const name = document.getElementById('cardName').value.trim();
             if (!name) { alert('Please enter a card name.'); return; }
-
-            // Capitalize first letter of each word
-            name = name.replace(/\b\w/g, c => c.toUpperCase());
 
             const data = loadData();
             data.cards.push({
@@ -455,6 +434,7 @@
             if (!tx) return;
 
             if (!tx.credited) {
+                // Show inline date picker instead of prompt
                 const pickerEl = document.getElementById(`credit-date-picker-${txId}`);
                 if (pickerEl) {
                     pickerEl.style.display = pickerEl.style.display === 'none' ? 'flex' : 'none';
@@ -508,41 +488,6 @@
             render();
         }
 
-        // Export data as JSON file
-        function exportData() {
-            const data = loadData();
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `paze-tracker-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        // Import data from JSON file
-        function importData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (!data.cards || !Array.isArray(data.cards)) {
-                        alert('Invalid file format. Expected a Paze tracker JSON export.');
-                        return;
-                    }
-                    if (!confirm(`This will replace all current data with ${data.cards.length} card(s) from the file. Continue?`)) return;
-                    saveData(data);
-                    render();
-                } catch (err) {
-                    alert('Error reading file: ' + err.message);
-                }
-            };
-            reader.readAsText(file);
-            event.target.value = '';
-        }
-
         function render() {
             const data = loadData();
             const cards = data.cards;
@@ -571,6 +516,7 @@
                 const credited = card.transactions.filter(t => t.credited).length;
                 const pct = (used / MAX_USES) * 100;
                 const isComplete = used >= MAX_USES;
+                const displayName = card.name;
 
                 const txHtml = card.transactions.map(tx => {
                     const creditLabel = tx.credited && tx.creditedDate 
@@ -605,7 +551,7 @@
                     <div class="card-item">
                         <div class="card-header">
                             <div>
-                                <div class="card-name">${card.name}</div>
+                                <div class="card-name">${displayName}</div>
                             </div>
                             <div style="text-align:right">
                                 <div style="font-size:1.1rem;font-weight:700;color:${isComplete ? '#16a34a' : '#2563eb'}">${used}/${MAX_USES}</div>
