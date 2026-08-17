@@ -124,6 +124,21 @@
         button.success:hover { background: #15803d; }
 
         /* Cards */
+        .card-selector {
+            margin-bottom: 16px;
+        }
+        .card-selector select {
+            width: 100%;
+            font-size: 0.9rem;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #1e293b;
+            outline: none;
+            cursor: pointer;
+        }
+        .card-selector select:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
         .cards-list { display: flex; flex-direction: column; gap: 14px; }
         .card-item {
             background: #ffffff;
@@ -304,6 +319,10 @@
                     <button class="danger" onclick="toggleAddCard()">Cancel</button>
                 </div>
             </div>
+        </div>
+
+        <div class="card-selector" id="cardSelector" style="display:none;">
+            <select id="cardDropdown" onchange="render()"></select>
         </div>
 
         <div class="cards-list" id="cardsList"></div>
@@ -555,84 +574,98 @@
             document.getElementById('totalTransactions').textContent = totalTx;
             document.getElementById('totalCards').textContent = cards.length;
 
-            // Cards
+            const selectorEl = document.getElementById('cardSelector');
+            const dropdown = document.getElementById('cardDropdown');
             const list = document.getElementById('cardsList');
+
             if (cards.length === 0) {
+                selectorEl.style.display = 'none';
                 list.innerHTML = '<div class="empty-state">No cards added yet. Add a card above to start tracking!</div>';
                 return;
             }
+
+            // Show and populate dropdown
+            selectorEl.style.display = 'block';
+            const previousSelection = dropdown.value;
+            const sortedCards = [...cards].sort((a, b) => a.name.localeCompare(b.name));
+            dropdown.innerHTML = sortedCards.map(c => 
+                `<option value="${c.id}" ${c.id === previousSelection ? 'selected' : ''}>${c.name} (${c.transactions.length}/${MAX_USES})</option>`
+            ).join('');
+
+            // If no previous selection, select first
+            const selectedId = dropdown.value || cards[0].id;
+            const card = cards.find(c => c.id === selectedId);
+            if (!card) return;
 
             // Build merchant suggestions datalist
             const merchants = getAllMerchants();
             const datalistHtml = `<datalist id="merchant-suggestions">${merchants.map(m => `<option value="${m}">`).join('')}</datalist>`;
 
-            list.innerHTML = datalistHtml + cards.map(card => {
-                const used = card.transactions.length;
-                const credited = card.transactions.filter(t => t.credited).length;
-                const pct = (used / MAX_USES) * 100;
-                const isComplete = used >= MAX_USES;
+            const used = card.transactions.length;
+            const credited = card.transactions.filter(t => t.credited).length;
+            const pct = (used / MAX_USES) * 100;
+            const isComplete = used >= MAX_USES;
 
-                const txHtml = card.transactions.map(tx => {
-                    const creditLabel = tx.credited && tx.creditedDate 
-                        ? `<div style="font-size:0.7rem;color:#16a34a;margin-top:2px">💰 Credited ${tx.creditedDate}</div>` 
-                        : '';
-                    const creditPicker = !tx.credited 
-                        ? `<div id="credit-date-picker-${tx.id}" style="display:none;align-items:center;gap:6px;margin-top:4px;">
-                            <input type="date" id="credit-date-input-${tx.id}" value="${new Date().toISOString().split('T')[0]}" style="font-size:0.75rem;padding:4px 6px;border-radius:6px;border:1px solid #cbd5e1;width:auto;" />
-                            <button onclick="confirmCredited('${card.id}','${tx.id}')" style="font-size:0.7rem;padding:4px 8px;width:auto;border-radius:6px;">Confirm</button>
-                           </div>` 
-                        : '';
-                    return `
-                    <div class="transaction">
-                        <div class="tx-left">
-                            <button class="tx-check ${tx.credited ? 'credited' : ''}" 
-                                    onclick="toggleCredited('${card.id}','${tx.id}')"
-                                    aria-label="${tx.credited ? 'Mark as not credited' : 'Mark as credited'}"
-                                    title="${tx.credited ? 'Credited ✓ — tap to undo' : 'Not yet credited — tap to mark'}">✓</button>
-                            <div>
-                                <span class="tx-info">${tx.date} · ${tx.merchant} · ${tx.amount}</span>
-                                ${creditLabel}
-                                ${creditPicker}
-                            </div>
-                        </div>
-                        <div class="tx-actions">
-                            <button class="tx-delete" onclick="deleteTransaction('${card.id}','${tx.id}')" aria-label="Delete transaction">✕</button>
-                        </div>
-                    </div>
-                `}).join('');
-
+            const txHtml = [...card.transactions].sort((a, b) => b.date.localeCompare(a.date)).map(tx => {
+                const creditLabel = tx.credited && tx.creditedDate 
+                    ? `<div style="font-size:0.7rem;color:#16a34a;margin-top:2px">💰 Credited ${tx.creditedDate}</div>` 
+                    : '';
+                const creditPicker = !tx.credited 
+                    ? `<div id="credit-date-picker-${tx.id}" style="display:none;align-items:center;gap:6px;margin-top:4px;">
+                        <input type="date" id="credit-date-input-${tx.id}" value="${new Date().toISOString().split('T')[0]}" style="font-size:0.75rem;padding:4px 6px;border-radius:6px;border:1px solid #cbd5e1;width:auto;" />
+                        <button onclick="confirmCredited('${card.id}','${tx.id}')" style="font-size:0.7rem;padding:4px 8px;width:auto;border-radius:6px;">Confirm</button>
+                       </div>` 
+                    : '';
                 return `
-                    <div class="card-item">
-                        <div class="card-header">
-                            <div>
-                                <div class="card-name">${card.name}</div>
-                            </div>
-                            <div style="text-align:right">
-                                <div style="font-size:1.1rem;font-weight:700;color:${isComplete ? '#16a34a' : '#2563eb'}">${used}/${MAX_USES}</div>
-                                <div style="font-size:0.7rem;color:#475569">${credited} credited</div>
-                            </div>
-                        </div>
-                        <div class="progress-bar" role="progressbar" aria-valuenow="${used}" aria-valuemin="0" aria-valuemax="${MAX_USES}">
-                            <div class="progress-fill ${isComplete ? 'complete' : ''}" style="width:${pct}%"></div>
-                        </div>
-                        <div class="card-stats">
-                            <span>${MAX_USES - used} uses left</span>
-                            <span>$${(MAX_USES - used) * CREDIT_AMOUNT} potential</span>
-                        </div>
-                        ${!isComplete ? `
-                        <div class="log-form">
-                            <input type="date" id="date-${card.id}" value="${new Date().toISOString().split('T')[0]}" />
-                            <input type="text" id="merchant-${card.id}" class="merchant-input" placeholder="Merchant" list="merchant-suggestions" autocomplete="off" />
-                            <input type="text" id="amount-${card.id}" class="amount-input" placeholder="$" inputmode="numeric" oninput="formatAmountInput(event)" />
-                            <button class="success" onclick="logTransaction('${card.id}')">+ Log</button>
-                        </div>` : '<div class="maxed-label">✓ Maxed out!</div>'}
-                        ${txHtml ? `<div class="transactions-list">${txHtml}</div>` : ''}
-                        <div class="card-delete-row">
-                            <button class="danger" onclick="deleteCard('${card.id}')">Delete Card</button>
+                <div class="transaction">
+                    <div class="tx-left">
+                        <button class="tx-check ${tx.credited ? 'credited' : ''}" 
+                                onclick="toggleCredited('${card.id}','${tx.id}')"
+                                aria-label="${tx.credited ? 'Mark as not credited' : 'Mark as credited'}"
+                                title="${tx.credited ? 'Credited ✓ — tap to undo' : 'Not yet credited — tap to mark'}">✓</button>
+                        <div>
+                            <span class="tx-info">${tx.date} · ${tx.merchant} · ${tx.amount}</span>
+                            ${creditLabel}
+                            ${creditPicker}
                         </div>
                     </div>
-                `;
-            }).join('');
+                    <div class="tx-actions">
+                        <button class="tx-delete" onclick="deleteTransaction('${card.id}','${tx.id}')" aria-label="Delete transaction">✕</button>
+                    </div>
+                </div>
+            `}).join('');
+
+            list.innerHTML = datalistHtml + `
+                <div class="card-item">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-name">${card.name}</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="font-size:1.1rem;font-weight:700;color:${isComplete ? '#16a34a' : '#2563eb'}">${used}/${MAX_USES}</div>
+                            <div style="font-size:0.7rem;color:#475569">${credited} credited</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar" role="progressbar" aria-valuenow="${used}" aria-valuemin="0" aria-valuemax="${MAX_USES}">
+                        <div class="progress-fill ${isComplete ? 'complete' : ''}" style="width:${pct}%"></div>
+                    </div>
+                    <div class="card-stats">
+                        <span>${MAX_USES - used} uses left</span>
+                        <span>$${(MAX_USES - used) * CREDIT_AMOUNT} potential</span>
+                    </div>
+                    ${!isComplete ? `
+                    <div class="log-form">
+                        <input type="date" id="date-${card.id}" value="${new Date().toISOString().split('T')[0]}" />
+                        <input type="text" id="merchant-${card.id}" class="merchant-input" placeholder="Merchant" list="merchant-suggestions" autocomplete="off" />
+                        <input type="text" id="amount-${card.id}" class="amount-input" placeholder="$" inputmode="numeric" oninput="formatAmountInput(event)" />
+                        <button class="success" onclick="logTransaction('${card.id}')">+ Log</button>
+                    </div>` : '<div class="maxed-label">✓ Maxed out!</div>'}
+                    ${txHtml ? `<div class="transactions-list">${txHtml}</div>` : ''}
+                    <div class="card-delete-row">
+                        <button class="danger" onclick="deleteCard('${card.id}')">Delete Card</button>
+                    </div>
+                </div>
+            `;
         }
 
         // Init
