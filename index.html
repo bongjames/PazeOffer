@@ -53,19 +53,33 @@
 
         /* Add Card */
         .add-card-section {
+            margin-bottom: 20px;
+        }
+        .add-card-section > button#addCardToggle {
+            background: #f1f5f9;
+            color: #2563eb;
+            border: 1px dashed #2563eb;
+            width: 100%;
+            padding: 12px;
+            font-size: 0.9rem;
+        }
+        .add-card-section > button#addCardToggle:hover { background: #e0e7ff; }
+        .add-card-form {
+            margin-top: 10px;
             background: #ffffff;
             border-radius: 12px;
             padding: 16px;
-            margin-bottom: 20px;
             border: 1px solid #e2e8f0;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
-        .add-card-section h2 { font-size: 1rem; margin-bottom: 10px; color: #1e293b; }
         .form-row {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             gap: 8px;
+            align-items: center;
         }
+        .form-row input { flex: 1; }
+        .form-row button { width: auto; flex-shrink: 0; }
         input, button {
             font-size: 0.9rem;
             padding: 10px 12px;
@@ -221,12 +235,7 @@
             header h1 { font-size: 1.8rem; }
             .summary { grid-template-columns: repeat(4, 1fr); }
             .summary-card .value { font-size: 1.6rem; }
-            .form-row {
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-            .form-row input { width: auto; flex: 1; min-width: 140px; }
-            .form-row button { width: auto; }
+            .form-row input { min-width: 140px; }
             .log-form {
                 flex-direction: row;
                 flex-wrap: nowrap;
@@ -264,13 +273,14 @@
             </div>
         </div>
 
-        <div class="add-card-section">
-            <h2>Add a Card</h2>
-            <div class="form-row">
-                <input type="text" id="cardName" placeholder="Card name (e.g. Freedom Flex)" />
-                <input type="text" id="cardBank" placeholder="Bank (e.g. Chase)" />
-                <input type="text" id="cardLast4" placeholder="Last 4 digits" maxlength="4" inputmode="numeric" />
-                <button onclick="addCard()">+ Add Card</button>
+        <div class="add-card-section" id="addCardSection">
+            <button onclick="toggleAddCard()" id="addCardToggle">+ Add a Card</button>
+            <div class="add-card-form" id="addCardForm" style="display:none;">
+                <div class="form-row">
+                    <input type="text" id="cardName" placeholder="e.g. Wife's Freedom Flex" />
+                    <button onclick="addCard()">Add</button>
+                    <button class="danger" onclick="toggleAddCard()">Cancel</button>
+                </div>
             </div>
         </div>
 
@@ -315,24 +325,32 @@
             e.target.value = '$' + dollars;
         }
 
+        function toggleAddCard() {
+            const form = document.getElementById('addCardForm');
+            const toggle = document.getElementById('addCardToggle');
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                toggle.style.display = 'none';
+                document.getElementById('cardName').focus();
+            } else {
+                form.style.display = 'none';
+                toggle.style.display = 'block';
+            }
+        }
+
         function addCard() {
             const name = document.getElementById('cardName').value.trim();
-            const bank = document.getElementById('cardBank').value.trim();
-            const last4 = document.getElementById('cardLast4').value.trim();
             if (!name) { alert('Please enter a card name.'); return; }
 
             const data = loadData();
             data.cards.push({
                 id: Date.now().toString(),
                 name,
-                bank,
-                last4,
                 transactions: []
             });
             saveData(data);
             document.getElementById('cardName').value = '';
-            document.getElementById('cardBank').value = '';
-            document.getElementById('cardLast4').value = '';
+            toggleAddCard();
             render();
         }
 
@@ -463,7 +481,7 @@
                 const credited = card.transactions.filter(t => t.credited).length;
                 const pct = (used / MAX_USES) * 100;
                 const isComplete = used >= MAX_USES;
-                const displayName = card.last4 ? `${card.name} ····${card.last4}` : card.name;
+                const displayName = card.name;
 
                 const txHtml = card.transactions.map(tx => {
                     const creditLabel = tx.credited && tx.creditedDate 
@@ -492,7 +510,6 @@
                         <div class="card-header">
                             <div>
                                 <div class="card-name">${displayName}</div>
-                                ${card.bank ? `<div class="card-bank">${card.bank}</div>` : ''}
                             </div>
                             <div style="text-align:right">
                                 <div style="font-size:1.1rem;font-weight:700;color:${isComplete ? '#16a34a' : '#2563eb'}">${used}/${MAX_USES}</div>
