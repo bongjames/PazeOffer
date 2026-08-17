@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paze $10 Offer Tracker</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkSansSerif, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            min-height: 100vh;
+            padding: 16px;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        header h1 { font-size: 1.4rem; margin-bottom: 4px; color: #2563eb; }
+        header p { color: #475569; font-size: 0.8rem; }
+        .promo-deadline {
+            margin-top: 6px;
+            font-size: 0.8rem;
+            color: #d97706;
+        }
+
+        /* Summary */
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .summary-card {
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .summary-card .value { font-size: 1.4rem; font-weight: 700; color: #16a34a; }
+        .summary-card .label { font-size: 0.7rem; color: #475569; margin-top: 2px; }
+
+        /* Add Card */
+        .add-card-section {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .add-card-section h2 { font-size: 1rem; margin-bottom: 10px; color: #1e293b; }
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        input, button {
+            font-size: 0.9rem;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #1e293b;
+            outline: none;
+            width: 100%;
+        }
+        input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
+        input::placeholder { color: #64748b; }
+        button {
+            background: #2563eb;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        button:hover { background: #1d4ed8; }
+        button.danger { background: #dc2626; }
+        button.danger:hover { background: #b91c1c; }
+        button.success { background: #16a34a; }
+        button.success:hover { background: #15803d; }
+
+        /* Cards */
+        .cards-list { display: flex; flex-direction: column; gap: 14px; }
+        .card-item {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .card-name { font-size: 1rem; font-weight: 600; color: #1e293b; }
+        .card-bank { color: #475569; font-size: 0.8rem; }
+        .progress-bar {
+            background: #e2e8f0;
+            border-radius: 8px;
+            height: 10px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2563eb, #60a5fa);
+            border-radius: 8px;
+            transition: width 0.3s ease;
+        }
+        .progress-fill.complete { background: linear-gradient(90deg, #16a34a, #4ade80); }
+        .card-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #334155;
+            margin-bottom: 10px;
+        }
+
+        /* Log form */
+        .log-form {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            gap: 8px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .log-form input { font-size: 0.85rem; padding: 9px 10px; flex: 1; min-width: 0; }
+        .log-form input[type="date"] { flex: 1.2; }
+        .log-form input.merchant-input { flex: 1.5; }
+        .log-form input.amount-input { flex: 0.7; max-width: 90px; }
+        .log-form button { font-size: 0.85rem; padding: 10px 12px; width: auto; flex-shrink: 0; }
+
+        .card-delete-row {
+            margin-top: 10px;
+        }
+        .card-delete-row button { width: auto; font-size: 0.75rem; padding: 5px 10px; }
+
+        /* Transactions */
+        .transactions-list {
+            margin-top: 12px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 10px;
+        }
+        .transaction {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 0.8rem;
+            color: #1e293b;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .transaction:last-child { border-bottom: none; }
+        .tx-left { display: flex; align-items: center; gap: 8px; flex: 1; }
+        .tx-info { flex: 1; }
+        .tx-actions { display: flex; align-items: center; gap: 6px; }
+        .tx-check {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid #cbd5e1;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: transparent;
+            transition: all 0.2s;
+            padding: 0;
+            flex-shrink: 0;
+        }
+        .tx-check.credited {
+            border-color: #16a34a;
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        .tx-delete {
+            background: transparent;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            width: auto;
+        }
+        .tx-delete:hover { color: #b91c1c; background: transparent; }
+        .empty-state {
+            text-align: center;
+            padding: 30px 16px;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        .maxed-label {
+            color: #16a34a;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+
+        /* Desktop adjustments */
+        @media (min-width: 600px) {
+            body { padding: 24px; }
+            header h1 { font-size: 1.8rem; }
+            .summary { grid-template-columns: repeat(4, 1fr); }
+            .summary-card .value { font-size: 1.6rem; }
+            .form-row {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .form-row input { width: auto; flex: 1; min-width: 140px; }
+            .form-row button { width: auto; }
+            .log-form {
+                flex-direction: row;
+                flex-wrap: nowrap;
+            }
+            .log-form input { width: auto; flex: 1; }
+            .log-form input.amount-input { max-width: 100px; }
+            .log-form button { width: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💳 Paze $10 Tracker</h1>
+            <p>Spend $10+ → Get $10 back · Up to 10x per card · June 15 – Sept 10, 2026</p>
+            <p class="promo-deadline" id="deadline"></p>
+        </header>
+
+        <div class="summary">
+            <div class="summary-card">
+                <div class="value" id="totalEarned">$0</div>
+                <div class="label">Earned</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" id="totalRemaining">$0</div>
+                <div class="label">Remaining</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" id="totalTransactions">0</div>
+                <div class="label">Transactions</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" id="totalCards">0</div>
+                <div class="label">Cards</div>
+            </div>
+        </div>
+
+        <div class="add-card-section">
+            <h2>Add a Card</h2>
+            <div class="form-row">
+                <input type="text" id="cardName" placeholder="Card name (e.g. Freedom Flex)" />
+                <input type="text" id="cardBank" placeholder="Bank (e.g. Chase)" />
+                <input type="text" id="cardLast4" placeholder="Last 4 digits" maxlength="4" inputmode="numeric" />
+                <button onclick="addCard()">+ Add Card</button>
+            </div>
+        </div>
+
+        <div class="cards-list" id="cardsList"></div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'paze_tracker_data';
+        const MAX_USES = 10;
+        const CREDIT_AMOUNT = 10;
+        const PROMO_END = new Date('2026-09-10');
+
+        function loadData() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            return raw ? JSON.parse(raw) : { cards: [] };
+        }
+
+        function saveData(data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function updateDeadline() {
+            const now = new Date();
+            const diff = PROMO_END - now;
+            if (diff <= 0) {
+                document.getElementById('deadline').textContent = 'Promo has ended.';
+                return;
+            }
+            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            document.getElementById('deadline').textContent = `⏰ ${days} days remaining`;
+        }
+
+        // Auto-format amount as currency: typing "1086" → "$10.86"
+        function formatAmountInput(e) {
+            let raw = e.target.value.replace(/[^0-9]/g, '');
+            if (raw === '') {
+                e.target.value = '';
+                return;
+            }
+            let cents = parseInt(raw, 10);
+            let dollars = (cents / 100).toFixed(2);
+            e.target.value = '$' + dollars;
+        }
+
+        function addCard() {
+            const name = document.getElementById('cardName').value.trim();
+            const bank = document.getElementById('cardBank').value.trim();
+            const last4 = document.getElementById('cardLast4').value.trim();
+            if (!name) { alert('Please enter a card name.'); return; }
+
+            const data = loadData();
+            data.cards.push({
+                id: Date.now().toString(),
+                name,
+                bank,
+                last4,
+                transactions: []
+            });
+            saveData(data);
+            document.getElementById('cardName').value = '';
+            document.getElementById('cardBank').value = '';
+            document.getElementById('cardLast4').value = '';
+            render();
+        }
+
+        function deleteCard(cardId) {
+            if (!confirm('Delete this card and all its transactions?')) return;
+            const data = loadData();
+            data.cards = data.cards.filter(c => c.id !== cardId);
+            saveData(data);
+            render();
+        }
+
+        function logTransaction(cardId) {
+            const merchantInput = document.getElementById(`merchant-${cardId}`);
+            const amountInput = document.getElementById(`amount-${cardId}`);
+            const dateInput = document.getElementById(`date-${cardId}`);
+            const merchant = merchantInput ? merchantInput.value.trim() : '';
+            const amount = amountInput ? amountInput.value.trim() : '';
+            const date = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+
+            const data = loadData();
+            const card = data.cards.find(c => c.id === cardId);
+            if (!card) return;
+            if (card.transactions.length >= MAX_USES) {
+                alert('This card has already reached 10 transactions!');
+                return;
+            }
+
+            // Check amount is $10 or more
+            const merchantName = merchant || 'Unknown';
+            if (amount) {
+                const numericAmount = parseFloat(amount.replace(/[^0-9.]/g, ''));
+                if (!isNaN(numericAmount) && numericAmount < 10) {
+                    alert('⚠️ The Paze offer requires a minimum spend of $10.00 per transaction.');
+                    return;
+                }
+            }
+
+            // Check for duplicate: same card, same day
+            const duplicate = card.transactions.find(t => t.date === date);
+            if (duplicate) {
+                const proceed = confirm(
+                    `⚠️ You already have a transaction on ${date} for this card (${duplicate.merchant}).\n\nThere can be hiccups with multiple transactions on the same card on the same day. Still add?`
+                );
+                if (!proceed) return;
+            }
+
+            card.transactions.push({
+                id: Date.now().toString(),
+                date,
+                merchant: merchantName,
+                amount: amount || '$10+',
+                credited: false
+            });
+            saveData(data);
+            render();
+        }
+
+        function toggleCredited(cardId, txId) {
+            const data = loadData();
+            const card = data.cards.find(c => c.id === cardId);
+            if (!card) return;
+            const tx = card.transactions.find(t => t.id === txId);
+            if (!tx) return;
+
+            if (!tx.credited) {
+                // Ask for the date the credit appeared
+                const today = new Date().toISOString().split('T')[0];
+                const creditDate = prompt('When was this credit posted? (YYYY-MM-DD)', today);
+                if (creditDate === null) return; // cancelled
+                tx.credited = true;
+                tx.creditedDate = creditDate || today;
+            } else {
+                tx.credited = false;
+                tx.creditedDate = null;
+            }
+            saveData(data);
+            render();
+        }
+
+        // Get all unique merchants across all cards
+        function getAllMerchants() {
+            const data = loadData();
+            const merchants = new Set();
+            data.cards.forEach(card => {
+                card.transactions.forEach(tx => {
+                    if (tx.merchant && tx.merchant !== 'Unknown') {
+                        merchants.add(tx.merchant);
+                    }
+                });
+            });
+            return [...merchants].sort();
+        }
+
+        function deleteTransaction(cardId, txId) {
+            const data = loadData();
+            const card = data.cards.find(c => c.id === cardId);
+            if (!card) return;
+            card.transactions = card.transactions.filter(t => t.id !== txId);
+            saveData(data);
+            render();
+        }
+
+        function render() {
+            const data = loadData();
+            const cards = data.cards;
+
+            // Summary
+            const totalTx = cards.reduce((sum, c) => sum + c.transactions.length, 0);
+            const totalPossible = cards.length * MAX_USES * CREDIT_AMOUNT;
+            document.getElementById('totalEarned').textContent = `$${totalTx * CREDIT_AMOUNT}`;
+            document.getElementById('totalRemaining').textContent = `$${totalPossible - totalTx * CREDIT_AMOUNT}`;
+            document.getElementById('totalTransactions').textContent = totalTx;
+            document.getElementById('totalCards').textContent = cards.length;
+
+            // Cards
+            const list = document.getElementById('cardsList');
+            if (cards.length === 0) {
+                list.innerHTML = '<div class="empty-state">No cards added yet. Add a card above to start tracking!</div>';
+                return;
+            }
+
+            // Build merchant suggestions datalist
+            const merchants = getAllMerchants();
+            const datalistHtml = `<datalist id="merchant-suggestions">${merchants.map(m => `<option value="${m}">`).join('')}</datalist>`;
+
+            list.innerHTML = datalistHtml + cards.map(card => {
+                const used = card.transactions.length;
+                const credited = card.transactions.filter(t => t.credited).length;
+                const pct = (used / MAX_USES) * 100;
+                const isComplete = used >= MAX_USES;
+                const displayName = card.last4 ? `${card.name} ····${card.last4}` : card.name;
+
+                const txHtml = card.transactions.map(tx => {
+                    const creditLabel = tx.credited && tx.creditedDate 
+                        ? `<div style="font-size:0.7rem;color:#16a34a;margin-top:2px">💰 Credited ${tx.creditedDate}</div>` 
+                        : '';
+                    return `
+                    <div class="transaction">
+                        <div class="tx-left">
+                            <button class="tx-check ${tx.credited ? 'credited' : ''}" 
+                                    onclick="toggleCredited('${card.id}','${tx.id}')"
+                                    aria-label="${tx.credited ? 'Mark as not credited' : 'Mark as credited'}"
+                                    title="${tx.credited ? 'Credited ✓' : 'Not yet credited — tap to mark'}">✓</button>
+                            <div>
+                                <span class="tx-info">${tx.date} · ${tx.merchant} · ${tx.amount}</span>
+                                ${creditLabel}
+                            </div>
+                        </div>
+                        <div class="tx-actions">
+                            <button class="tx-delete" onclick="deleteTransaction('${card.id}','${tx.id}')" aria-label="Delete transaction">✕</button>
+                        </div>
+                    </div>
+                `}).join('');
+
+                return `
+                    <div class="card-item">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-name">${displayName}</div>
+                                ${card.bank ? `<div class="card-bank">${card.bank}</div>` : ''}
+                            </div>
+                            <div style="text-align:right">
+                                <div style="font-size:1.1rem;font-weight:700;color:${isComplete ? '#16a34a' : '#2563eb'}">${used}/${MAX_USES}</div>
+                                <div style="font-size:0.7rem;color:#475569">${credited} credited</div>
+                            </div>
+                        </div>
+                        <div class="progress-bar" role="progressbar" aria-valuenow="${used}" aria-valuemin="0" aria-valuemax="${MAX_USES}">
+                            <div class="progress-fill ${isComplete ? 'complete' : ''}" style="width:${pct}%"></div>
+                        </div>
+                        <div class="card-stats">
+                            <span>${MAX_USES - used} uses left</span>
+                            <span>$${(MAX_USES - used) * CREDIT_AMOUNT} potential</span>
+                        </div>
+                        ${!isComplete ? `
+                        <div class="log-form">
+                            <input type="date" id="date-${card.id}" value="${new Date().toISOString().split('T')[0]}" />
+                            <input type="text" id="merchant-${card.id}" class="merchant-input" placeholder="Merchant" list="merchant-suggestions" autocomplete="off" />
+                            <input type="text" id="amount-${card.id}" class="amount-input" placeholder="$" inputmode="numeric" oninput="formatAmountInput(event)" />
+                            <button class="success" onclick="logTransaction('${card.id}')">+ Log</button>
+                        </div>` : '<div class="maxed-label">✓ Maxed out!</div>'}
+                        ${txHtml ? `<div class="transactions-list">${txHtml}</div>` : ''}
+                        <div class="card-delete-row">
+                            <button class="danger" onclick="deleteCard('${card.id}')">Delete Card</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Init
+        updateDeadline();
+        render();
+    </script>
+</body>
+</html>
